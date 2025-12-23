@@ -1,42 +1,180 @@
-# Design Document – Final Project
+1. Загальна інформація про проєкт
 
-## Project Overview
-The project is a text-based RPG game with a character catalog.
-It was developed iteratively, starting from a CLI catalog,
-extending with game business logic, persistence, and planned GUI.
+Назва проєкту: Text RPG Game (CLI)
+Тип застосунку: консольний застосунок
+Мова програмування: C#
+Платформа: .NET
+Тип інтерфейсу: Command Line Interface (CLI)
+Архітектурний стиль: багатошарова архітектура
+Проєкт є навчальним застосунком, що демонструє повний цикл розробки програмного забезпечення:
+від командного інтерфейсу та бізнес-логіки до збереження даних, підготовки графічного інтерфейсу та розгортання.
 
-## Command Line Interface
-CLI provides interaction with the system through commands:
-list, create, start, save, load.
-It operates in a single process (REPL) and is used as both
-a user interface and a debugging tool.
+2. Архітектура проєкту
+Архітектура проєкту побудована відповідно до принципів:
+Separation of Concerns
+Single Responsibility Principle
+Open/Closed Principle
+Застосунок логічно поділений на такі шари:
+Командний інтерфейс (CLI)
+Бізнес-логіка гри
+Підсистема постійності (збереження)
+Моделі даних
+(Проєктно) Графічний інтерфейс
+Кожен шар ізольований та взаємодіє з іншими лише через публічні методи.
 
-## Business Logic
-The core business logic is implemented in the Game module.
-It includes:
-- character creation
-- combat mechanics
-- turn-based interaction model
+3. Командний інтерфейс (CLI)
+3.1 Призначення CLI
+CLI є основним способом взаємодії користувача з грою.
+Він віповідає за:
+прийом команд користувача;
+запуск ігрових сценаріїв;
+керування грою;
+відображення результатів.
+CLI не містить бізнес-логіки та не виконує обчислень.
 
-### Damage Formula
-effectiveDamage = max(0, Damage - Armor)
-finalDamage = effectiveDamage * (1 - Resist)
+3.2 Доступні команди
+Команда	Опис
+help	Вивід списку доступних команд
+characters	Вивід доступних персонажів
+start	Початок гри
+action	Виконання дії в ігровому циклі
+save	Збереження стану гри
+load	Завантаження останнього сейву
+exit	Завершення роботи
 
-## Persistence
-Persistence is implemented via JSON serialization.
-Game state and characters are stored in a local file (save.json).
-This approach is simple and suitable for the current stage.
+3.3 Режим роботи
+CLI працює у циклі:
+Очікування команди
+Парсинг введення
+Виклик відповідної логіки
+Вивід результату
+Повернення до очікування
 
-## Graphical Interface (Planned)
-A GUI layer (WPF, MVVM) is planned as an alternative interface.
-It will visualize characters as cards and display battle logs.
-At the current stage, GUI is described architecturally.
+4. Бізнес-логіка гри
+4.1 Загальна характеристика
+Бізнес-логіка є ядром застосунку та реалізує всі ігрові правила, механіки та обчислення.
+Вона повністю ізольована від CLI та GUI.
 
-## Build & Deployment
-The project is built using .NET SDK.
-Release build can be produced with:
-dotnet publish -c Release
+4.2 Предметна область
+Предметною областю є покрокова RPG-гра, де персонажі взаємодіють між собою відповідно до визначених правил бою.
 
-## Conclusion
-The project satisfies final course requirements by combining
-CLI, business logic, persistence, and documented GUI architecture.
+4.3 Моделі даних
+4.3.1 Character
+Клас Character представляє ігрового персонажа.
+Основні характеристики:
+Name — ім’я персонажа
+Health — рівень життя
+Damage — базова шкода
+Armor — плоский захист
+Resist — відсотковий захист
+Speed — швидкість
+
+4.3.2 Game
+Клас Game є центральним елементом бізнес-логіки та відповідає за:
+запуск гри;
+основний ігровий цикл;
+управління ходами;
+збереження історії бою.
+
+4.3.3 Turn
+Клас Turn інкапсулює один ігровий хід:
+список дій;
+порядок виконання;
+результати атак.
+
+5. Ігрові механіки
+5.1 Покрокова система
+Гра працює у покроковому режимі.
+Кожен хід складається з послідовності дій персонажів.
+Порядок дій визначається характеристикою Speed.
+
+5.2 Формула фізичної атаки
+Від базової шкоди віднімається броня:
+effectiveDamage = Damage - Armor
+Якщо значення менше або дорівнює нулю — шкода не проходить.
+Якщо шкода пройшла, застосовується резист:
+finalDamage = effectiveDamage * (1 - Resist / 100)
+
+5.3 Оновлення стану персонажа
+Після атаки:
+Health = Health - finalDamage
+Якщо Health <= 0, персонаж вважається переможеним.
+
+5.4 Історія бою
+Усі дії зберігаються у журналі бою, що дозволяє:
+переглядати хід гри;
+відновлювати стан;
+аналізувати результати.
+
+6. Підсистема постійності (Save / Load)
+6.1 Призначення
+Підсистема постійності забезпечує:
+збереження стану гри;
+збереження створених персонажів;
+відновлення гри з останнього сейву.
+
+6.2 Формат збереження
+Для збереження використовується JSON-серіалізація.
+Причини вибору:
+простота;
+підтримка у .NET;
+читабельність;
+гнучкість.
+
+6.3 Дані, що зберігаються
+характеристики персонажів;
+поточний хід гри;
+історія бою;
+службова інформація гри.
+
+6.4 Процес збереження
+Отримання стану гри
+Серіалізація у JSON
+Запис у файл
+
+6.5 Процес завантаження
+Перевірка наявності файлу
+Зчитування JSON
+Десеріалізація
+Відновлення гри
+
+6.6 Розташування файлів
+Windows: AppData/Local
+Linux/macOS: прихована директорія користувача
+
+7. Графічний інтерфейс (проєктно)
+7.1 Призначення GUI
+GUI розглядається як альтернативний інтерфейс для тієї ж бізнес-логіки.
+
+7.2 Обрана технологія
+WPF (Windows Presentation Foundation)
+
+7.3 Архітектурний підхід
+Патерн MVVM:
+Model — бізнес-логіка
+View — графічні елементи
+ViewModel — зв’язок між ними
+
+7.4 Інтеграція з CLI
+CLI та GUI використовують одне ядро гри, що:
+запобігає дублюванню логіки;
+спрощує тестування;
+підвищує масштабованість.
+
+8. Розгортання та збірка
+8.1 Конфігурації
+Debug — розробка
+Release — фінальна версія
+
+8.2 Збірка
+dotnet build -c Release
+
+8.3 Запуск
+dotnet run
+
+9. Подальший розвиток
+додавання магічних атак;
+статус-ефекти;
+AI супротивників;
+повноцінний GUI;
+мережевий режим.
